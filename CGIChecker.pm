@@ -1,6 +1,4 @@
 
-# $Id: CGIChecker.pm,v 1.39 2001/06/02 22:27:02 trip Exp $
-
 package HTML::CGIChecker;
 
 use strict;
@@ -8,7 +6,7 @@ use Carp;
 
 BEGIN {
 	use vars qw ($VERSION @ISA);
-	$VERSION     = 0.80;
+	$VERSION     = 0.90;
 	@ISA         = ();
 }
 
@@ -46,13 +44,13 @@ B<HTML::CGIChecker - A Perl module to detect dangerous HTML code>
 		err_tag => 'Tag {tag} is not allowed in {element}.'
 	);
 
-	# Now you can use it to check any string by calling its checkHTML()
+	# Now you can use it to check any string using its checkHTML()
 	# method. It "remembers" its configuration, so you can reuse it.
 
 	($checked_feedback, $Warnings) = 
 		$checker->checkHTML ($feedback);
 
-	# process the results ...
+	# Process the results ...
 
 	if ($checked_feedback) {
 		# save $checked_feedback to the database ....
@@ -94,32 +92,39 @@ to other users.
 The currently available module HTML::QuickCheck that should fill the same
 purpose does not offer some crucial features:
 
-- checking of B<correct quoting> - this problem can be fatal, because the
-  common typo when one forgets to close quotes in for example a HREF parameter
-  almost always totally corrupts the rest of a page
+Checking of B<correct quoting> - this problem can be fatal, because the
+common typo when one forgets to close quotes in for example a HREF parameter
+almost always totally corrupts the rest of a page.
 
-- B<HTML escaping> of the right parts of the posts - ie. of the non-HTML parts
+B<HTML escaping> of the right parts of the posts - ie. of the non-HTML parts.
 
-- denying/allowing of B<javascripts>
+Denying/allowing of B<javascripts>.
 
-- denying/allowing of B<images>, applets, styles, forms and other similar
-  functionality that requires a programmer to be able to deny/allow tags
-  or entire tags classes on an individual basis
+Denying/allowing of B<images>, applets, styles, forms and other similar
+functionality that requires a programmer to be able to deny/allow tags
+or entire tags classes on an individual basis.
 
-- support for the special formatting B<PRE tag>
+Support for the special formatting B<PRE tag>. Please note that the
+PRE tag has special meaning for this module.
+Everything that is placed inside PRE block is automatically HTML
+escaped. The users can use this behaviour to easily post for
+example code snippets that contain unescaped HTML brackets. All they
+need is to place the snippet inside a PRE block. They do not need to
+worry about escaping of the brackets.
 
-- ability to B<customize/localize the warning messages> that are returned
-  to the user in case when a problematic HTML in his post is detected
+Ability to B<customize/localize the warning messages> that are returned
+to the user in case when a problematic HTML in his post is detected.
 
-- autocorrection of some "common" errors, for example of chat messages
-  containing unescaped HTML brackets - "peter E<gt> how are you ?"
+Autocorrection of some "common" errors, for example of chat messages
+containing unescaped HTML brackets - "peter E<gt> how are you ?".
+Both unmatched opening and closing HTML brackets are autocorrected.
 
-- proper detection of some table closing tags problems that can break the page
-  in some browsers
+Proper detection of some table closing tags problems that can break the page
+in some browsers.
 
-- images to appropriate links conversion
+Conversion of images to appropriate hyperlinks.
 
-- automatic "http://" prepending to URLs posted by the users
+Automatic prepending of "http://" to URLs which do not start with "http://".
 
 
 =head1 DESCRIPTION
@@ -127,14 +132,17 @@ purpose does not offer some crucial features:
 HTML::CGIChecker is a module for web developers to parse HTML and to detect
 HTML code that could break a page in some way.
 This module is not a HTML validator, but it allows one to check the HTML
-code that users post to your web application, for example to a discussion
+code that users post to a web application, for example to a discussion
 board, to prevent them to post a piece of code that would render the rest
 of a page it is displayed on unusable.
+
 Using it one also can deny javascripts, images, tables or any other
-tags on	an individual basis. It also can check for correct quoting
-and correct	URLs.
+tags on an individual basis. It also can check for correct quoting
+and correct URLs.
+
 The module can autocorrect some common bad users' behaviour, for
-example	the use of unescaped HTML brackets in a chat room, etc.
+example the use of unescaped HTML brackets in a chat room, etc.
+
 It is easy to use and very useful in any CGI application in which
 you want its users to be able to use HTML in their posts to some
 customizable extent. It is object oriented and designed to be easily
@@ -142,11 +150,10 @@ extensible.
 
 B<This is not a validator>, for validation you need an other
 solution. This module does not care about correctness of the parsed HTML code
-at all - all it does care about is whether the code could break a page.
-HTML tags that are not paired correctly or that will not be renderable at all
-can pass this checker. All names of elements and attributes are not case
+at all. All it does care about is whether the HTML code could break a page.
+HTML tags that are not paired correctly or that cannot be rendered at all
+can pass this checker. All the names of elements and attributes are not case
 sensitive.
-
 
 The checker object is created by calling new() constructor of HTML::CGIChecker
 class.
@@ -169,8 +176,12 @@ B<new() - the constructor>
 
 Creates and returns a new checker object that can be configured with
 parameters that are described below. Default configuration allows only
-a few harmless tags to be used in the HTML code - <B>, <I>, <A>, <U>,
-<STRONG>, <BR>. Other tags except the special PRE tag are not allowed.
+a few harmless inline tags to be used in the HTML code:
+
+    B I A U STRONG BR
+    EM CITE VAR ABBR Q DFN CODE SUB SUP SAMP KBD ACRONYM
+
+Other tags except the special PRE tag are not allowed.
 Javascripts are by default also not allowed. 
 
 The various parameters are passed in as a list of B<parameter =E<gt> value>
@@ -178,7 +189,10 @@ pairs. List of these parameters together with their default values follows:
 
 	mode => 'allow'
 	allowclasses => []
-	allowtags => [ qw ( B I A U STRONG BR ) ]	
+	allowtags => [ qw ( 
+        B I A U STRONG BR EM CITE VAR ABBR Q DFN CODE
+        SUB SUP SAMP KBD ACRONYM
+	) ]	
 	denyclasses => [ keys (%tagclasses) ]
 	denytags => [ qw ( FONT ) ]
 	jscript => 0
@@ -187,7 +201,9 @@ pairs. List of these parameters together with their default values follows:
 	img_to_link => 0
 	check_http => 1
 	debug => 0
-	nonpairtags => [ qw ( IMG HR BR ) ]
+	nonpairtags => [ qw (
+	    IMG HR BR INPUT META AREA COL BASE LINK PARAM
+	) ]
 	check_attribs => {}
 	err_tag => 'Tag {tag} is not allowed in {element}.'
 	err_javascript => 'Javascript is not allowed in {element}.'
@@ -200,47 +216,60 @@ B<mode>
 
 Two modes are available: allow (default) and deny.
 
-	allow: error raised if any tag that is not explicitely allowed is found
-	deny : error raised if an explicitely denied tag is found, any other tags
-	       are allowed
+B<allow>: Error is raised if any tag that is not explicitely
+allowed is found.
+
+B<deny>: Error is raised if an explicitely denied tag is found,
+any other tags are allowed.
+
 
 B<allowclasses, allowtags>
 
+These parameters apply only in the 'allow' mode.
 Here you can specify the tags you allow the user to use.
 Allowtags must be a reference to an array of tag names.
 Allowclasses must be a refernce to an array of class names.
 Tag class (tag group) is a set of tags that can be allowed or denied all
 at once by allowing or denying the class. These classes are available:
 
-	base        FRAMESET FRAME HTML BODY HEAD TITLE STYLE SCRIPT
-	externals   APPLET OBJECT LINK IFRAME
-	forms       FORM TEXTAREA SELECT INPUT
-	tables      TABLE TR TD TBODY THEAD TFOOT TH COLGROUP COL
-	lists       LI UL DL DD
-	images      IMG
+	base        FRAMESET FRAME HTML BODY HEAD TITLE BASE
+	            STYLE SCRIPT META NOSCRIPT NOFRAMES
+	externals   APPLET OBJECT LINK IFRAME PARAM
+	forms       FORM TEXTAREA SELECT INPUT BUTTON LABEL
+	            FIELDSET LEGEND OPTGROUP
+	tables      TABLE TR TD TBODY THEAD TFOOT TH COLGROUP
+	            COL CAPTION
+	lists       UL OL LI DL DT DD
+	images      IMG MAP AREA
+	heading     H1 H2 H3 H4 H5 H6 H7 H8
 
-By default no classes and only the <B>, <I>, <A>, <U>, <STRONG>, <BR>
-tags are allowed. Do not include brackets in the tag names.
-Include only the opening tags.
+By default only the above mentioned harmless inline tags are allowed.
+By default no classes are allowed.
 
 B<denyclasses>, B<denytags>
 
-Used only in deny mode, works similar to the allowclasses and allowtags
+These parameters apply only in the 'deny' mode.
+They work similar to the allowclasses and allowtags
 parameters. By default B<all> above listed classes plus the FONT tag are
 denied. All other tags are by default allowed in this mode.
 
 B<jscript>
 
-	0: javascript not allowed
-	1: javascript allowed
+This option disables javascript inside HTML elements.
+You also must ensure that the SCRIPT tag is not allowed to block
+the javascript completely.
+
+	0: javascript is not allowed
+	1: javascript is allowed
 	Default: 0
 
 
 B<html>
 
-	0: messages will not be in HTML format nor HTML escaped - useful for the
-	   command line mode
-	1: all warning messages will be in HTML versions and also HTML escaped
+	0: messages will not be in HTML format nor HTML escaped -
+       useful for the command line mode
+	1: all warning messages will be in HTML versions and also
+       HTML escaped
 	Default: 0
 
 B<pre>
@@ -252,8 +281,8 @@ B<pre>
 B<img_to_link>
 
 	0: do not alter images
-	1: convert all images to appropriate links to these images 
-		<IMG SRC="url">  ---->  <A HREF="url">url</A>
+	1: convert all images to appropriate links to these
+       images: <IMG SRC="url">  ---->  <A HREF="url">url</A>
 	Default: 0
 
 B<check_http>
@@ -263,30 +292,33 @@ B<check_http>
 	   with "http://", "ftp://" or "mailto:"
 	Default: 1
 	
-	Note: the URLs are recognized only in HREF and SRC parameters
+	Note: the URLs are recognized only in
+    HREF and SRC parameters.
 
 B<debug>
 
-	0: debugging to STDERR disabled
-	1: debugging to STDERR enabled
+	0: debugging to STDERR is disabled
+	1: debugging to STDERR is enabled
 	Default: 0	
 
 B<nonpairtags>
 
 The tags that are processed as non-pair can be specified here
 via a reference to an anonymous array.
-By default these tags are processed as non-pair: IMG HR BR
+By default these tags are processed as non-pair:
+
+    IMG HR BR INPUT META AREA COL BASE LINK PARAM
 
 B<check_attribs>
 
-You also can allow the user to use only a limited set of attributes
-for each element. This parameter is a hash reference, that consists
-of key->value pairs, in which the key is an element, and the value
-is a reference to an array of attributes. For each element specified
-in this hash, the user will only be allowed to use the specified
-attributes.
+You also can use the check_attribs parameter to allow the user to use
+only a limited set of attributes in an element. The parameter is a
+hash reference, that consists of key->value pairs, in which the key is
+name of an element, and the value is a reference to an array of attributes.
+For each element specified in this hash, the user will only be allowed
+to use the specified attributes.
 
-For example, if you define following hash reference
+For example, if you define following hash reference:
 
 	check_attribs => {
 			img => [ 'src', 'width', 'height', 'alt' ]
@@ -295,7 +327,7 @@ For example, if you define following hash reference
 then the user will be allowed to use ONLY the specified attributes in
 the <IMG> element. Any other elements are not affected and the user
 will be allowed to use any attributes in them. Names of the elements
-and the attributes are not case sensitive.
+and of the attributes are not case sensitive.
 
 B<Warning messages> can be redefined by setting these parameters:
 
@@ -306,9 +338,8 @@ B<Warning messages> can be redefined by setting these parameters:
 	err_notopened    = 'Pair tag {tag} was not opened.'
 
 Messages displayed above are the defaults. Special tokens {tag} and {element}
-are transformed to the appropriate values. You can redefine these messages to
+are replaced by the appropriate values. You can redefine these messages to
 localize them.
-
 
 
 B<checkHTML() - the actual HTML check method>
@@ -334,7 +365,6 @@ array. Usual way to print all the warnings is using the join() function:
 	print join ("<BR>\n", @{$Warnings});
 
 
-
 =head1 SUPPORT
 
 No official support is provided, but I welcome any comments, patches
@@ -352,7 +382,7 @@ it and also breaks a page.
 
 =head1 AVAILABILITY
 
-	http://lsd.cz/tripie/
+	http://www.geocities.com/tripiecz/
 
 
 =head1 AUTHOR
@@ -418,21 +448,25 @@ sub _html_escape;
 END { }
 
 sub new {
-	$_ = shift;
-	my $class = ref($_) || $_;
+	my $class = shift;
 	
 	croak ('HTML::CGIChecker - even number of parameters expected.')
 		if (@_ % 2);	
 	
 	my %tagclasses;
 	$tagclasses{'base'} = 
-	[ qw ( FRAMESET FRAME HTML BODY HEAD TITLE STYLE SCRIPT ) ];
-	$tagclasses{'externals'} = [ qw ( APPLET OBJECT LINK IFRAME ) ];	
-	$tagclasses{'forms'} = [ qw ( FORM TEXTAREA SELECT INPUT ) ];
+	[ qw ( FRAMESET FRAME HTML BODY HEAD TITLE BASE
+	       STYLE SCRIPT META NOSCRIPT NOFRAMES ) ];
+	$tagclasses{'externals'} = [ qw ( APPLET OBJECT LINK IFRAME PARAM ) ];
+	$tagclasses{'forms'} = [ qw (
+	    FORM TEXTAREA SELECT INPUT BUTTON LABEL FIELDSET LEGEND
+	    OPTGROUP
+	) ];
 	$tagclasses{'tables'} = 
-	[ qw ( TABLE TR TD TBODY THEAD TFOOT TH COLGROUP COL ) ];
-	$tagclasses{'lists'} = [ qw ( LI UL DL DD ) ];	
-	$tagclasses{'images'} = [ qw ( IMG ) ];
+	[ qw ( TABLE TR TD TBODY THEAD TFOOT TH COLGROUP COL CAPTION ) ];
+	$tagclasses{'lists'} = [ qw ( UL OL LI DL DD DT ) ];	
+	$tagclasses{'images'} = [ qw ( IMG MAP AREA ) ];
+	$tagclasses{'heading'} = [ qw ( H1 H2 H3 H4 H5 H6 H7 H8 ) ];
 
 	# set the defaults
 	my $self = {
@@ -441,14 +475,19 @@ sub new {
 		denyclasses => [ keys (%tagclasses) ],
 		denytags => [ qw ( FONT ) ],
 		allowclasses => [],
-		allowtags => [ qw ( B I A U STRONG BR ) ],	
+		allowtags => [ qw ( 
+		    B I A U STRONG BR EM CITE VAR ABBR Q DFN CODE
+            SUB SUP SAMP KBD ACRONYM
+        ) ],	
 		jscript => 0,
 		html => 0,
 		pre => 1,
 		img_to_link => 0,
 		check_http => 1,
 		debug => 0,
-		nonpairtags => [ qw ( IMG HR BR ) ],
+		nonpairtags => [ qw (
+		    IMG HR BR INPUT META AREA COL BASE LINK PARAM
+		) ],
 		check_attribs => {},
 		err_tag => 'Tag {tag} is not allowed in {element}.',
 		err_javascript => 'Javascript is not allowed in {element}.',
@@ -505,28 +544,25 @@ sub checkHTML {
 	$self->{'_errors'} = [];
 	$self->{'_opentags'} = {};
 	$self->{'_closetags'} = {};
-	
-	while ($in)	{
-		# some stupid browsers allow \s before the tag name
-		if ($in !~ /(.*?)<\s*(\/*\w.*?)>(.*)/s)	{											
-			$out .= $self->_html_escape($in);
-			last;
+
+    my @tokens = split(/(<[^<]*?>)/s, $in);
+    my $token;
+	foreach $token (@tokens) {
+        if (index($token, '<') != 0) { 
+            # This token is not a HTML element.
+            # Jump to the next token.
+			$out .= $self->_html_escape($token);
+			next;
 		}
 		
-		# The non-HTML part is html-escaped and pushed to the end of the
-		# output buffer.		
-		$out .= $self->_html_escape($1);
-
-		# Here we start processing of the HTML code element
-			
-		$self->{'_element'} = "<$2>";	# element = the whole <.*> thing
-		$self->{'_tag'} = uc($2);		# tag = name of this tag
-		$in = $3;				# cut off the whole part we process now
-		
-		$self->{'_tag'} =~ s/ .*//s;
+		# This token is a HTML element.					
+		$self->{'_element'} = $token;	# element = the whole <.*> thing
+		($self->{'_tag'}) = $token =~ m|^<\s*(/?\w+)|s;   # name of this tag
+		next if (not $self->{'_tag'});		
+		$self->{'_tag'} = uc($self->{'_tag'});
 		
 		# generetes the abstag
-		if ($self->{'_tag'} =~ /^\//) {
+		if (index($self->{'_tag'}, '/') == 0) {
 			$self->{'_abstag'} = substr ($self->{'_tag'}, 1);
 		}
 		else {
@@ -560,14 +596,11 @@ sub checkHTML {
 		# element is not inside a PRE block.
 		#
 		# This method calls all the methods that process the current element.
-		# Override this method in your subclass to add your own methods.
-		
+		# Override this method in your subclass to add your own methods.		
 		$self->_process_element();
 		
 		# Current element is pushed to the end of the output buffer.			
-		
-		$out .= $self->{'_element'};
-	
+		$out .= $self->{'_element'};	
 	}
 	# END of the loop
 	
@@ -597,7 +630,7 @@ sub checkHTML {
 #####################   	PRIVATE METHODS  		##########################
 ##############################################################################
 
-# compiles the array of allowed/denied tags
+# "compiles" the array of allowed/denied tags
 # resolves tag classes and merges them with individualy specified tags
 
 sub _pair_compile {
@@ -678,7 +711,7 @@ sub _http {
 						|telnet://
 						|file://
 						)
-						!xi);
+						!xis);
 	}
 }
 
@@ -716,7 +749,7 @@ sub _javascript {
 	my $self = shift;
 	if (not $self->{'jscript'}) {
 		if ($self->{'_element'} =~ /javascript/i or
-			$self->{'_element'} =~ /\son\w+\s*=\s*"?.*"?/i) {
+			$self->{'_element'} =~ /\son\w+\s*=/i) {
 				push (@{$self->{'_errors'}}, 
 					$self->_parse_error ($self->{'err_javascript'}));
 		}
@@ -729,8 +762,8 @@ sub _check_attribs {
 	my $element = $self->{'_element'};
 	
 	if (ref($self->{'check_attribs'}->{$self->{'_abstag'}})) {
-		$element =~ s/^<\w+\s*//;
-		$element =~ s/>$//;
+		$element =~ s/^<\w+\s*//s;
+		$element =~ s|/?>$||;
 		my @pairs = split(/\s+/, $element);
 		my $pair;
 		foreach $pair (@pairs) {
@@ -747,15 +780,16 @@ sub _check_attribs {
 }
 
 
-# works with counters of tags, so we can later say if there are some tags that
-# are not correctly either closed or opened
-# this implementation prevents a user to place a closing tag before the opening
-# one and thus make the checker to think it was correctly closed 
+# Works with counters of tags, so we can later say if there are some tags that
+# are not correctly either closed or opened.
+# This implementation prevents a user to place a closing tag before the opening
+# one and thus make the checker to think it was correctly closed.
 
 sub _pair_saveinfo {
 	my $self = shift;
 	
-	if ($self->{'_tag'} =~ /^\//) {
+	if (index($self->{'_tag'}, '/') == 0) {
+	    # this is a closing tag
 		if (not grep ( ($_ eq $self->{'_abstag'}), 
 				  @{$self->{'nonpairtags'}})) { 
 			if ($self->{'_opentags'}->{$self->{'_abstag'}}) { 
@@ -768,6 +802,7 @@ sub _pair_saveinfo {
 	}
 	elsif (not grep ( ($_ eq $self->{'_abstag'}), 
 				  @{$self->{'nonpairtags'}})) {
+		# this is an opening tag
 		$self->{'_opentags'}->{$self->{'_abstag'}}++;
 	}
 }
@@ -830,14 +865,18 @@ sub _pair_check {
 }
 
 
-# escapes some dangerous characters - DOES NOT escape the ampersand, so users
-# can post HTML entities
+# Escapes some dangerous characters.
+# Ampersand "&" is escaped only if it is not part of a HTML entity.
+# Therefore, users can post HTML entities. Ampersands that are part
+# of an ordinary text are still properly escaped.
+# Thanks to godless@hermes.slipstream.com for this idea.
 
 sub _html_escape {
 	my $self = shift;
 	my ($in) = @_;
 
 	for ($in) {	
+	    s/&(?!\w+;)/&amp;/g;
 		s/>/&gt;/g;
 		s/</&lt;/g;
 		s/"/&quot;/g;
